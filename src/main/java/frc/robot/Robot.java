@@ -6,13 +6,14 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
-// import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-// import com.revrobotics.CANSparkMax;
-// import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -31,10 +32,11 @@ public class Robot extends TimedRobot {
   private TalonFX right2;
   private TalonFX left1;
   private TalonFX left2;
-  // private CANSparkMax intake;
-  // private CANSparkMax shooter;
+  private CANSparkMax intake;
+  private CANSparkMax shooter;
   private XboxController player1;
   private RobotContainer m_robotContainer;
+  private DigitalInput thingyThatGoesBoom;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -50,8 +52,9 @@ public class Robot extends TimedRobot {
     right2 = new TalonFX(2);
     left1 = new TalonFX(3);
     left2 = new TalonFX(1);
-    // shooter = new CANSparkMax(1, MotorType.kBrushless);
-    // intake = new CANSparkMax(3, MotorType.kBrushless);
+    shooter = new CANSparkMax(1, MotorType.kBrushless);
+    intake = new CANSparkMax(3, MotorType.kBrushless);
+    thingyThatGoesBoom = new DigitalInput(9);
     player1 = new XboxController(0);
 
     left2.follow(left1); //idk how this part works xd
@@ -62,9 +65,6 @@ public class Robot extends TimedRobot {
     right2.setNeutralMode(NeutralMode.Brake);
     left1.setNeutralMode(NeutralMode.Brake);
     left2.setNeutralMode(NeutralMode.Brake);
-    
-    // boolean intakePressed = player1.getRightBumper(); // Right bumper on controller activates intake (hopefully)
-    // boolean pressed = player1.getLeftBumper();
 
   }
 
@@ -120,11 +120,52 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
+    // This is for Tank Drive - NOT Arcade
+    // double leftWheelsControl = player1.getLeftY();
+    // double rightWheelsControl = player1.getRightY();
+    // right1.set(ControlMode.PercentOutput, rightWheelsControl);
+    // left1.set(ControlMode.PercentOutput, leftWheelsControl);
+    
+    //This is for Arcade Drive 
+    double leftSideArcade = player1.getLeftY();
+    double rightSideArcade = player1.getRightX();
+    double left = leftSideArcade + rightSideArcade ;
+    double right = leftSideArcade - rightSideArcade;
+    boolean intakeControl = player1.getRightBumper();
+    boolean shooterControl = player1.getLeftBumper();
+    boolean didItGoBoom = thingyThatGoesBoom.get();
 
-    double leftWheelsControl = player1.getLeftY();
-    double rightWheelsControl = player1.getRightY();
-    right1.set(ControlMode.PercentOutput, rightWheelsControl);
-    left1.set(ControlMode.PercentOutput, leftWheelsControl);
+    // Let's do some math, we want wheel control only either left or right 
+    if(left > 1.0){
+      left = 1.0; //sets a hard limit since it will go over 1
+    }else if(right > 1.0){
+      right = 1.0; // same, sets a hard limit
+    }else if(left < -1.0){
+      left = -1.0; // same, sets a hard limit
+    }else if(right < -1.0){
+      right = -1.0; // same, sets a hard limit
+    }
+
+    // Tell either left or right to go!!!
+    right1.set(ControlMode.PercentOutput, right);
+    left1.set(ControlMode.PercentOutput, left);
+
+    if (intakeControl == false){
+      intake.set(0);
+    } else if (intakeControl == true){
+      intake.set(.75);
+    }
+
+    if (shooterControl == false){
+      shooter.set(0);
+    } else if(shooterControl == true){
+      shooter.set(.65);
+    }
+
+    //SmartDashboard.putNumber(double, rightWheelsControl);
+    SmartDashboard.putNumber("Right Wheel Speed", rightSideArcade);
+    SmartDashboard.putNumber("Left Wheel Speed", leftSideArcade);
+    SmartDashboard.putBoolean("Digital Input", didItGoBoom);
   }
 
   @Override
